@@ -19,11 +19,14 @@ def connect_to_server(info):
 
         auth_v = generate_auth_v(info, contents[1], contents[0], client_socket.getsockname())
         service_request = generate_service_request(info, contents[0], auth_v, contents[1])
+        c_v_session_key = get_c_v_session_key(info, contents[0], contents[1])
 
         # Send the service ticket.
         client_socket.sendall(bytes(service_request, 'UTF-8'))
 
         mutual_auth = client_socket.recv(1024)
+        info.set_des_key(bytes(c_v_session_key, 'UTF-8'))
+        print("Received PlainText: " + info.decrypt_message(mutual_auth))
 
         if validate_mutual_auth(info, mutual_auth, service_request):
             print("Mutual Authentication Success.")
@@ -111,6 +114,10 @@ def get_c_tgs_session_key(info, message_as):
     info.read_des_key("keys/key_c.txt")
     c_tgs_session_key = info.split_message(info.decrypt_message(message_as))[0]
     return c_tgs_session_key
+
+def get_c_v_session_key(info, message_v, c_tgs_session_key):
+    info.set_des_key(bytes(c_tgs_session_key, 'UTF-8'))
+    return info.split_message(info.decrypt_message(message_v))[0]
 
 def get_ticket_tgs(info, message_as):
     info.read_des_key("keys/key_c.txt")
